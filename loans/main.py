@@ -13,7 +13,7 @@ class Loan:
     amount: int
     date: str
 
-    def __init__(self,id,name,amount,date):
+    def __init__(self,id, name, amount, date):
         self.id = id
         self.name = name
         self.amount = amount
@@ -36,19 +36,26 @@ class LoanRequest(BaseModel):
     }
 
 LOANS = [
-    Loan(id=1,name="Jose Garcia",amount=100,date="2021-01-10"),
-    Loan(id=2,name="Liam Garcia",amount=100,date="2021-01-10"),
-    Loan(id=3,name="Adalynn Garcia",amount=100,date="2021-01-10"),
+    Loan(id=1, name="Jose Garcia", amount=100, date=date(2021, 1, 10)),
+    Loan(id=2, name="Liam Garcia", amount=100, date=date(2021, 2, 10)),
+    Loan(id=3, name="Adalynn Garcia", amount=100, date=date(2021, 3, 10)),
 ]
 
 @app.get("/loans")
 async def get_loans():
     return LOANS
 
-@app.post("/create_loan")
+@app.get("/loans/{loan_date}")
+async def get_loan_by_date(loan_date: date):
+    for loan in LOANS:
+        if loan.date == loan_date:
+            return loan
+
+@app.post("/loans")
 async def create_loan(loan_request: LoanRequest):
     new_loan = Loan(**loan_request.model_dump())
     LOANS.append(find_loan_id(new_loan))
+    return new_loan
 
 def find_loan_id(loan: Loan):
     if LOANS:
