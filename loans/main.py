@@ -64,3 +64,18 @@ def find_loan_id(loan: Loan):
     else:
         loan.id = 1
     return loan
+
+@app.put("/loans/{loan_id}", response_model=LoanRequest | None)
+async def update_loan(loan_id: int, loan: LoanRequest):
+    for index, existing_loan in enumerate(LOANS):
+        if existing_loan.id == loan_id:
+            updated_loan = Loan(
+                id=loan_id,
+                name=loan.name,
+                amount=loan.amount,
+                date=loan.date
+            )
+            LOANS[index] = updated_loan
+            return updated_loan
+
+    return None
