@@ -1,9 +1,11 @@
 from typing import Optional
 
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, HTTPException
 from pydantic import BaseModel, Field
 
 from datetime import date
+
+from starlette import status
 
 app = FastAPI()
 
@@ -46,10 +48,13 @@ async def get_loans():
     return LOANS
 
 @app.get("/loans/by-date")
-async def get_loan_by_date(date: Optional[date] = None):
-    if date:
-        return [loan for loan in LOANS if loan.date == date]
-    return LOANS
+async def get_loan_by_date(date: date):
+    result = [loan for loan in LOANS if loan.date == date]
+
+    if not result:
+        raise HTTPException(status_code=404, detail="loan not found")
+
+    return result
 
 @app.post("/loans")
 async def create_loan(loan_request: LoanRequest):
@@ -78,11 +83,13 @@ async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
             LOANS[index] = updated_loan
             return updated_loan
 
-    return None
+    raise HTTPException(status_code=404, detail="Loan not found")
 
-@app.delete("/loans/{loan_id}")
+@app.delete("/loans/{loan_id}",  status_code=204)
 async def delete_loan(loan_id: int = Path(gt=0)):
     for index, existing_loan in enumerate(LOANS):
         if existing_loan.id == loan_id:
             LOANS.pop(index)
             return {"message": "loan deleted"}
+
+    raise HTTPException(status_code=404, detail="Loan not found")
