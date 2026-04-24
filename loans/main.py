@@ -43,11 +43,11 @@ LOANS = [
     Loan(id=3, name="Adalynn Garcia", amount=100, date=date(2021, 3, 10)),
 ]
 
-@app.get("/loans")
+@app.get("/loans", status_code=status.HTTP_200_OK)
 async def get_loans():
     return LOANS
 
-@app.get("/loans/by-date")
+@app.get("/loans/by-date", status_code=status.HTTP_200_OK)
 async def get_loan_by_date(date: date):
     result = [loan for loan in LOANS if loan.date == date]
 
@@ -56,7 +56,7 @@ async def get_loan_by_date(date: date):
 
     return result
 
-@app.post("/loans")
+@app.post("/loans", status_code=status.HTTP_201_CREATED)
 async def create_loan(loan_request: LoanRequest):
     new_loan = Loan(**loan_request.model_dump())
     LOANS.append(find_loan_id(new_loan))
@@ -70,7 +70,7 @@ def find_loan_id(loan: Loan):
         loan.id = 1
     return loan
 
-@app.put("/loans/{loan_id}", response_model=LoanRequest | None)
+@app.put("/loans/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
 async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
     for index, existing_loan in enumerate(LOANS):
         if existing_loan.id == loan_id:
@@ -81,15 +81,15 @@ async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
                 date=loan.date
             )
             LOANS[index] = updated_loan
-            return updated_loan
+            return
 
     raise HTTPException(status_code=404, detail="Loan not found")
 
-@app.delete("/loans/{loan_id}",  status_code=204)
+@app.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(loan_id: int = Path(gt=0)):
     for index, existing_loan in enumerate(LOANS):
         if existing_loan.id == loan_id:
             LOANS.pop(index)
-            return {"message": "loan deleted"}
+            return
 
     raise HTTPException(status_code=404, detail="Loan not found")
