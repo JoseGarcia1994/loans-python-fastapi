@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 from pydantic import BaseModel, Field
 
 from datetime import date
@@ -66,7 +66,7 @@ def find_loan_id(loan: Loan):
     return loan
 
 @app.put("/loans/{loan_id}", response_model=LoanRequest | None)
-async def update_loan(loan_id: int, loan: LoanRequest):
+async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
     for index, existing_loan in enumerate(LOANS):
         if existing_loan.id == loan_id:
             updated_loan = Loan(
@@ -81,7 +81,7 @@ async def update_loan(loan_id: int, loan: LoanRequest):
     return None
 
 @app.delete("/loans/{loan_id}")
-async def delete_loan(loan_id: int):
+async def delete_loan(loan_id: int = Path(gt=0)):
     for index, existing_loan in enumerate(LOANS):
         if existing_loan.id == loan_id:
             LOANS.pop(index)
