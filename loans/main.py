@@ -37,7 +37,7 @@ class LoanRequest(BaseModel):
 
 LOANS = [
     Loan(id=1, name="Jose Garcia", amount=100, date=date(2021, 1, 10)),
-    Loan(id=2, name="Liam Garcia", amount=100, date=date(2021, 2, 10)),
+    Loan(id=2, name="Liam Garcia", amount=100, date=date(2021, 1, 10)),
     Loan(id=3, name="Adalynn Garcia", amount=100, date=date(2021, 3, 10)),
 ]
 
@@ -45,11 +45,11 @@ LOANS = [
 async def get_loans():
     return LOANS
 
-@app.get("/loans/{loan_date}")
-async def get_loan_by_date(loan_date: date):
-    for loan in LOANS:
-        if loan.date == loan_date:
-            return loan
+@app.get("/loans/by-date")
+async def get_loan_by_date(date: Optional[date] = None):
+    if date:
+        return [loan for loan in LOANS if loan.date == date]
+    return LOANS
 
 @app.post("/loans")
 async def create_loan(loan_request: LoanRequest):
