@@ -79,3 +79,10 @@ async def update_loan(loan_id: int, loan: LoanRequest):
             return updated_loan
 
     return None
+
+@app.delete("/loans/{loan_id}")
+async def delete_loan(loan_id: int):
+    for index, existing_loan in enumerate(LOANS):
+        if existing_loan.id == loan_id:
+            LOANS.pop(index)
+            return {"message": "loan deleted"}
