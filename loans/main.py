@@ -81,19 +81,26 @@ async def create_loan(db: db_dependency, loan_request: LoanRequest):
         )
 
 @app.put("/loans/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
-async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
-    for index, existing_loan in enumerate(LOANS):
-        if existing_loan.id == loan_id:
-            updated_loan = Loan(
-                id=loan_id,
-                name=loan.name,
-                amount=loan.amount,
-                date=loan.date
-            )
-            LOANS[index] = updated_loan
-            return
+async def update_loan(
+        db: db_dependency,
+        loan: LoanRequest,
+        loan_id: int = Path(gt=0)
+):
+    loan_model = db.query(Loan).filter(Loan.id == loan_id).first()
 
-    raise HTTPException(status_code=404, detail="Loan not found")
+    if loan_model is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    update_data = loan.model_dump(exclude={"id"})
+
+    for key, value in update_data.items():
+        setattr(loan_model, key, value)
+
+    db.commit()
+    db.refresh(loan_model)
+
+    return loan_model
+
 
 @app.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(loan_id: int = Path(gt=0)):
