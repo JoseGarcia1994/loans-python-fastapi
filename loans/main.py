@@ -6,8 +6,12 @@ from pydantic import BaseModel, Field
 from datetime import date
 
 from starlette import status
+import models
+from database import engine
 
 app = FastAPI()
+
+models.Base.metadata.create_all(bind=engine)
 
 class Loan:
     id: int
