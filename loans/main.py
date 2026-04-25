@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from datetime import date
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
 import models
@@ -62,18 +63,22 @@ async def get_loan_by_date(
     return loans
 
 @app.post("/loans", status_code=status.HTTP_201_CREATED)
-async def create_loan(loan_request: LoanRequest):
-    new_loan = Loan(**loan_request.model_dump())
-    LOANS.append(find_loan_id(new_loan))
-    return new_loan
+async def create_loan(db: db_dependency, loan_request: LoanRequest):
+    try:
+        new_loan = Loan(**loan_request.model_dump())
 
-def find_loan_id(loan: Loan):
-    if LOANS:
-        max_id = max(l.id for l in LOANS)
-        loan.id = max_id + 1
-    else:
-        loan.id = 1
-    return loan
+        db.add(new_loan)
+        db.commit()
+        db.refresh(new_loan)
+
+        return new_loan
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Error creating loan"
+        )
 
 @app.put("/loans/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
 async def update_loan( loan: LoanRequest, loan_id: int = Path(gt=0)):
