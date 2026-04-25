@@ -103,10 +103,16 @@ async def update_loan(
 
 
 @app.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
-async def delete_loan(loan_id: int = Path(gt=0)):
-    for index, existing_loan in enumerate(LOANS):
-        if existing_loan.id == loan_id:
-            LOANS.pop(index)
-            return
+async def delete_loan(db: db_dependency, loan_id: int = Path(gt=0)):
 
-    raise HTTPException(status_code=404, detail="Loan not found")
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    try:
+        db.delete(loan)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error deleting loan")
