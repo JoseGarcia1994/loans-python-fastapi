@@ -1,29 +1,28 @@
-from typing import Optional
+from typing import Optional, Annotated
 
-from fastapi import FastAPI, Path, HTTPException
+from fastapi import FastAPI, Path, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 
 from datetime import date
 
+from sqlalchemy.orm import Session
 from starlette import status
 import models
-from database import engine
+from models import Loan
+from database import engine, SessionLocal
 
 app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
 
-class Loan:
-    id: int
-    name: str
-    amount: int
-    date: str
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-    def __init__(self,id, name, amount, date):
-        self.id = id
-        self.name = name
-        self.amount = amount
-        self.date = date
+db_dependency = Annotated[Session, Depends(get_db)]
 
 class LoanRequest(BaseModel):
     id: Optional[int] = None
@@ -47,18 +46,20 @@ LOANS = [
     Loan(id=3, name="Adalynn Garcia", amount=100, date=date(2021, 3, 10)),
 ]
 
-@app.get("/loans", status_code=status.HTTP_200_OK)
-async def get_loans():
-    return LOANS
+@app.get("/", status_code=status.HTTP_200_OK)
+async def get_loans(db: db_dependency):
+    return db.query(Loan).all()
 
 @app.get("/loans/by-date", status_code=status.HTTP_200_OK)
-async def get_loan_by_date(date: date):
-    result = [loan for loan in LOANS if loan.date == date]
+async def get_loan_by_date(
+        db: db_dependency,
+        date: date = Query(..., description="Date in format YYYY-MM-DD"),
+):
+    loans = db.query(Loan).filter(Loan.date == date).all()
 
-    if not result:
-        raise HTTPException(status_code=404, detail="loan not found")
-
-    return result
+    if not loans:
+        raise HTTPException(status_code=404, detail="No loans found for this date")
+    return loans
 
 @app.post("/loans", status_code=status.HTTP_201_CREATED)
 async def create_loan(loan_request: LoanRequest):
