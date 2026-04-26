@@ -3,13 +3,13 @@ from typing import Optional, Annotated
 from fastapi import FastAPI, Path, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from starlette import status
 import models
-from models import Loan
+from models import Loan, Payment
 from database import engine, SessionLocal
 
 app = FastAPI()
@@ -25,6 +25,7 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
+# This validates automatically the model
 class LoanRequest(BaseModel):
     id: Optional[int] = None
     name: str = Field(min_length=3, max_length=24)
@@ -41,22 +42,54 @@ class LoanRequest(BaseModel):
         }
     }
 
-LOANS = [
-    Loan(id=1, name="Jose Garcia", amount=100, date=date(2021, 1, 10)),
-    Loan(id=2, name="Liam Garcia", amount=100, date=date(2021, 1, 10)),
-    Loan(id=3, name="Adalynn Garcia", amount=100, date=date(2021, 3, 10)),
-]
+# This validates automatically the model
+class PaymentRequest(BaseModel):
+    payment: int = Field(gt=0)
+    payment_date: date
+    paid: bool
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "payment": 1,
+                "payment_date": "2026-04-25",
+                "paid": False
+            }
+        }
+    }
+
+# Only transfers object to JSON
+class PaymentResponse(BaseModel):
+    payment_number: int
+    payment_date: date
+    paid: bool
+
+    class Config:
+        from_attributes = True
+
+def generate_payment_schedule(start_date, weeks=14):
+    # Find Nex Monday
+    days_ahead = 0 - start_date.weekday() + 7
+    first_monday = start_date + timedelta(days=days_ahead)
+
+    dates = []
+
+    for i in range(weeks):
+        payment_date = first_monday + timedelta(weeks=i)
+        dates.append(payment_date)
+
+    return dates
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def get_loans(db: db_dependency):
-    return db.query(Loan).all()
+    return db.query(Loan).options(joinedload(Loan.payments)).all()
 
 @app.get("/loans/by-date", status_code=status.HTTP_200_OK)
 async def get_loan_by_date(
         db: db_dependency,
         date: date = Query(..., description="Date in format YYYY-MM-DD"),
 ):
-    loans = db.query(Loan).filter(Loan.date == date).all()
+    loans = db.query(Loan).options(joinedload(Loan.payments)).filter(Loan.date == date).all()
 
     if not loans:
         raise HTTPException(status_code=404, detail="No loans found for this date")
@@ -70,6 +103,21 @@ async def create_loan(db: db_dependency, loan_request: LoanRequest):
         db.add(new_loan)
         db.commit()
         db.refresh(new_loan)
+
+        # Find next monday
+        payment_dates = generate_payment_schedule(loan_request.date)
+
+        for i, payment_date in enumerate(payment_dates):
+            payment = Payment(
+                payment_number=i + 1,
+                payment_date=payment_date,
+                paid=False,
+                loan_id=new_loan.id
+            )
+
+            db.add(payment)
+
+        db.commit()
 
         return new_loan
 
@@ -99,7 +147,15 @@ async def update_loan(
     db.commit()
     db.refresh(loan_model)
 
-    return loan_model
+    # Find next monday
+    payment_dates = generate_payment_schedule(loan.date)
+
+    payments = db.query(Payment).filter(Payment.loan_id == loan_model.id).all()
+
+    for i, payment in enumerate(payments):
+        payment.payment_date = payment_dates[i]
+
+    db.commit()
 
 
 @app.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
