@@ -1,7 +1,6 @@
-from typing import Optional, Annotated
+from typing import Annotated
 
 from fastapi import FastAPI, Path, HTTPException, Depends, Query
-from pydantic import BaseModel, Field
 
 from datetime import date, timedelta
 
@@ -11,6 +10,7 @@ from starlette import status
 from app.db import models
 from app.db.models import Loan, Payment
 from app.db.database import (engine, SessionLocal)
+from app.schemas.loan import LoanRequest
 
 app = FastAPI()
 
@@ -24,48 +24,6 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
-
-# This validates automatically the model
-class LoanRequest(BaseModel):
-    id: Optional[int] = None
-    name: str = Field(min_length=3, max_length=24)
-    amount: int = Field(gt=-1)
-    date: date
-
-    model_config = {
-        "json_schema": {
-            "example": {
-                "name": "name of loan",
-                "amount": 100,
-                "date": "2021-01-10"
-            }
-        }
-    }
-
-# This validates automatically the model
-class PaymentRequest(BaseModel):
-    payment: int = Field(gt=0)
-    payment_date: date
-    paid: bool
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "payment": 1,
-                "payment_date": "2026-04-25",
-                "paid": False
-            }
-        }
-    }
-
-# Only transfers object to JSON
-class PaymentResponse(BaseModel):
-    payment_number: int
-    payment_date: date
-    paid: bool
-
-    class Config:
-        from_attributes = True
 
 def generate_payment_schedule(start_date, weeks=14):
     # Find Nex Monday
