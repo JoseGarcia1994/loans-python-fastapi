@@ -8,8 +8,8 @@ from datetime import date, timedelta
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 from starlette import status
-import models
-from models import Loan, Payment
+from app.db import models
+from app.db.models import Loan, Payment
 from app.db.database import (engine, SessionLocal)
 
 app = FastAPI()
