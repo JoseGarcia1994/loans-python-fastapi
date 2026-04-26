@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from starlette import status
 import models
 from models import Loan, Payment
-from database import engine, SessionLocal
+from app.db.database import (engine, SessionLocal)
 
 app = FastAPI()
 
