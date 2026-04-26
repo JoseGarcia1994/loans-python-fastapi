@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, Path, HTTPException, Depends, Query
 
-from datetime import date, timedelta
+from datetime import date
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
@@ -11,6 +11,7 @@ from app.db import models
 from app.db.models import Loan, Payment
 from app.db.database import (engine, SessionLocal)
 from app.schemas.loan import LoanRequest
+from app.services.loan_service import generate_payment_schedule
 
 app = FastAPI()
 
@@ -24,19 +25,6 @@ def get_db():
         db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
-
-def generate_payment_schedule(start_date, weeks=14):
-    # Find Nex Monday
-    days_ahead = 0 - start_date.weekday() + 7
-    first_monday = start_date + timedelta(days=days_ahead)
-
-    dates = []
-
-    for i in range(weeks):
-        payment_date = first_monday + timedelta(weeks=i)
-        dates.append(payment_date)
-
-    return dates
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def get_loans(db: db_dependency):
