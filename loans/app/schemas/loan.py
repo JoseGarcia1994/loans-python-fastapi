@@ -1,8 +1,11 @@
-from typing import Optional
+# 📦 Standard library
+from datetime import date
 
+# 🌐 Third-party
+from typing import Optional
 from pydantic import BaseModel, Field
 
-from datetime import date
+# 📁 Local imports
 
 # This validates automatically the model
 class LoanRequest(BaseModel):

@@ -1,12 +1,15 @@
+# 📦 Standard library
+from datetime import date
+
+# 🌐 Third-party
 from fastapi import Path, HTTPException, Query, APIRouter
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from starlette import status
 
+# 📁 Local imports
 from ..deps import db_dependency
 from ...db.models import Loan, Payment
-from datetime import date
-
 from ...schemas.loan import LoanRequest
 from ...services.loan_service import generate_payment_schedule
 

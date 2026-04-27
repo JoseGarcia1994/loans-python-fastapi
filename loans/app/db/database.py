@@ -1,6 +1,11 @@
+# 📦 Standard library
+
+# 🌐 Third-party
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+
+# 📁 Local imports
 
 SQLALCHEMY_DATABASE_URL = 'sqlite:///loans.db'
 

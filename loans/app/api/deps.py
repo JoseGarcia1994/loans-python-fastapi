@@ -1,10 +1,12 @@
-from typing import Annotated
+# 📦 Standard library
 
+# 🌐 Third-party
+from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+# 📁 Local imports
 from ..db.database import SessionLocal
-
 
 def get_db():
     db = SessionLocal()

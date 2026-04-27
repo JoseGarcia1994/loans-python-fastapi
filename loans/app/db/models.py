@@ -1,6 +1,10 @@
+# 📦 Standard library
+
+# 🌐 Third-party
 from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
+# 📁 Local imports
 from .database import Base
 
 class Loan(Base):

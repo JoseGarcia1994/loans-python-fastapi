@@ -1,5 +1,8 @@
+# 📦 Standard library
 from datetime import timedelta
+# 🌐 Third-party
 
+# 📁 Local imports
 
 def generate_payment_schedule(start_date, weeks=14):
     # Find Nex Monday
