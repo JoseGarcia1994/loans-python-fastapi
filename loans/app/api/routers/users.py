@@ -6,6 +6,7 @@ from fastapi import APIRouter
 # 📁 Local imports
 from ...db.models import User
 from ...schemas.user import CreateUserRequest
+from ...core.security import hash_password
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ async def create_user(user_request: CreateUserRequest):
         email=user_request.email,
         first_name=user_request.first_name,
         last_name=user_request.last_name,
-        hashed_password=user_request.password,
+        hashed_password=hash_password(user_request.password),
         is_active=True,
         role=user_request.role
     )
