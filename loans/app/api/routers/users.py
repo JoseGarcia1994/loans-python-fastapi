@@ -2,16 +2,18 @@
 
 # 🌐 Third-party
 from fastapi import APIRouter
+from starlette import status
 
 # 📁 Local imports
 from ...db.models import User
-from ...schemas.user import CreateUserRequest
+from ...schemas.user import CreateUserRequest, UserResponse
 from ...core.security import hash_password
+from ..deps import db_dependency
 
 router = APIRouter()
 
-@router.post("/users")
-async def create_user(user_request: CreateUserRequest):
+@router.post("/users", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+async def create_user(db: db_dependency, user_request: CreateUserRequest):
     create_user_model = User(
         email=user_request.email,
         first_name=user_request.first_name,
@@ -20,5 +22,9 @@ async def create_user(user_request: CreateUserRequest):
         is_active=True,
         role=user_request.role
     )
+
+    db.add(create_user_model)
+    db.commit()
+    db.refresh(create_user_model)
 
     return create_user_model

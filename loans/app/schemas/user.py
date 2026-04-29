@@ -22,3 +22,11 @@ class CreateUserRequest(BaseModel):
             }
         }
     }
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    is_active: bool
+    role: str
