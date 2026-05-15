@@ -13,7 +13,9 @@ from ...services.auth_service import authenticate_user
 from ...schemas.auth_schema import Token
 from ...core.security import create_access_token
 
-router = APIRouter()
+router = APIRouter(
+    tags=["auth"],
+)
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(

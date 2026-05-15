@@ -12,6 +12,6 @@ app = FastAPI()
 
 models.Base.metadata.create_all(bind=engine)
 
-app.include_router(loans.router)
-app.include_router(users.router)
-app.include_router(auth.router)
+app.include_router(loans.router, prefix="/loans")
+app.include_router(users.router, prefix="/user")
+app.include_router(auth.router, prefix="/auth")

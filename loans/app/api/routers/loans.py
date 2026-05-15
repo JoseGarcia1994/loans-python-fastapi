@@ -13,13 +13,13 @@ from ...db.models import Loan, Payment
 from ...schemas.loan import LoanRequest
 from ...services.loan_service import generate_payment_schedule
 
-router = APIRouter()
+router = APIRouter(tags=["loan"])
 
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_loans(db: db_dependency):
     return db.query(Loan).options(joinedload(Loan.payments)).all()
 
-@router.get("/loans/by-date", status_code=status.HTTP_200_OK)
+@router.get("/by-date", status_code=status.HTTP_200_OK)
 async def get_loan_by_date(
         db: db_dependency,
         date: date = Query(..., description="Date in format YYYY-MM-DD"),
@@ -30,7 +30,7 @@ async def get_loan_by_date(
         raise HTTPException(status_code=404, detail="No loans found for this date")
     return loans
 
-@router.post("/loans", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_loan(db: db_dependency, loan_request: LoanRequest):
     try:
         new_loan = Loan(**loan_request.model_dump())
@@ -63,7 +63,7 @@ async def create_loan(db: db_dependency, loan_request: LoanRequest):
             detail="Error creating loan"
         )
 
-@router.put("/loans/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
+@router.put("/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
 async def update_loan(
         db: db_dependency,
         loan: LoanRequest,
@@ -93,7 +93,7 @@ async def update_loan(
     db.commit()
 
 
-@router.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(db: db_dependency, loan_id: int = Path(gt=0)):
 
     loan = db.query(Loan).filter(Loan.id == loan_id).first()

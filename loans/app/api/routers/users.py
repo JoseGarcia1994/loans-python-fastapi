@@ -10,9 +10,9 @@ from ...schemas.user import CreateUserRequest, UserResponse
 from ...core.security import hash_password
 from ..deps import db_dependency
 
-router = APIRouter()
+router = APIRouter(tags=["user"])
 
-@router.post("/users", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 async def create_user(db: db_dependency, user_request: CreateUserRequest):
     create_user_model = User(
         email=user_request.email,

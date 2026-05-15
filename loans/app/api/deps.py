@@ -12,7 +12,7 @@ from starlette import status
 from ..db.database import SessionLocal
 from ..core.security import SECRET_KEY, ALGORITHM
 
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 def get_db():
     db = SessionLocal()
