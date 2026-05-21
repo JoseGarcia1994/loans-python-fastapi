@@ -15,10 +15,11 @@ def hash_password(password: str) -> str:
 SECRET_KEY = "InGodWeTrust"
 ALGORITHM = "HS256"
 
-def create_access_token(email: str, user_id: int, expires_delta: timedelta):
+def create_access_token(email: str, user_id: int, role: str, expires_delta: timedelta):
     encode = {
         "sub": email,
         "id": user_id,
+        "role": role,
     }
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({"exp": expires})
