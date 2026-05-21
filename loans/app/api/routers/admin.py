@@ -1,7 +1,8 @@
 # 📦 Standard library
 
 # 🌐 Third-party
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from starlette import status
 
@@ -32,3 +33,24 @@ async def get_users(user: user_dependency, db: db_dependency):
             detail="Not Authorized"
         )
     return db.query(User).all()
+
+@router.delete("loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
+async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):
+    if user.get("user_role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not Authorized"
+        )
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    try:
+        db.delete(loan)
+        db.commit()
+
+    except SQLAlchemyError:
+        db.rollback()
+
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error deleting loan")
