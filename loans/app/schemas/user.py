@@ -39,3 +39,7 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ChangePasswordRequest(BaseModel):
+    password: str
+    new_password: str = Field(min_length=6,)
