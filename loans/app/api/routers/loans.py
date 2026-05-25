@@ -10,7 +10,7 @@ from starlette import status
 # 📁 Local imports
 from ..deps import db_dependency, user_dependency
 from ...db.models import Loan, Payment
-from ...schemas.loan import LoanRequest
+from ...schemas.loan import LoanRequest, UpdateLoanRequest
 from ...services.loan_service import generate_payment_schedule
 
 router = APIRouter(tags=["loan"])
@@ -76,7 +76,7 @@ async def create_loan(user: user_dependency,
 async def update_loan(
         user: user_dependency,
         db: db_dependency,
-        loan: LoanRequest,
+        loan: UpdateLoanRequest,
         loan_id: int = Path(gt=0)
 ):
     loan_model = db.query(Loan).filter(Loan.id == loan_id, Loan.owner_id == user.get("id")).first()

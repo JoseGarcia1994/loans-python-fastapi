@@ -34,7 +34,7 @@ async def get_users(user: user_dependency, db: db_dependency):
         )
     return db.query(User).all()
 
-@router.delete("loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):
     if user.get("user_role") != "admin":
         raise HTTPException(
