@@ -6,9 +6,9 @@ from starlette import status
 
 # 📁 Local imports
 from ...db.models import User
-from ...schemas.user import CreateUserRequest, UserResponse
+from ...schemas.user import CreateUserRequest, UserResponse, UserProfileResponse
 from ...core.security import hash_password
-from ..deps import db_dependency
+from ..deps import db_dependency, user_dependency
 
 router = APIRouter(tags=["user"])
 
@@ -36,3 +36,7 @@ async def create_user(db: db_dependency, user_request: CreateUserRequest):
     db.refresh(create_user_model)
 
     return create_user_model
+
+@router.get("/", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
+async def get_current_user_profile(user: user_dependency, db: db_dependency):
+    return db.query(User).filter(User.id == user.get("id")).first()

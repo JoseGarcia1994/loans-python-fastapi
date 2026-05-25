@@ -29,3 +29,13 @@ class UserResponse(BaseModel):
     last_name: str
     is_active: bool
     role: str
+
+class UserProfileResponse(BaseModel):
+    id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    role: str
+
+    class Config:
+        from_attributes = True
