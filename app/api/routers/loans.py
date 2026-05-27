@@ -19,6 +19,27 @@ router = APIRouter(tags=["loan"])
 async def get_loans(user: user_dependency, db: db_dependency):
     return db.query(Loan).options(joinedload(Loan.payments)).filter(Loan.owner_id == user.get("id")).all()
 
+@router.get("/{loan_id}", status_code=status.HTTP_200_OK)
+async def get_loan_by_id(
+        user: user_dependency,
+        db: db_dependency,
+        loan_id: int = Path(gt=0),
+):
+    loan = db.query(Loan).options(
+        joinedload(Loan.payments)
+    ).filter(
+        Loan.id == loan_id,
+        Loan.owner_id == user.get("id")
+    ).first()
+
+    if not loan:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan not found"
+        )
+
+    return loan
+
 @router.get("/by-date", status_code=status.HTTP_200_OK)
 async def get_loan_by_date(
         user: user_dependency,
