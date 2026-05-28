@@ -19,6 +19,45 @@ router = APIRouter(tags=["loan"])
 async def get_loans(user: user_dependency, db: db_dependency):
     return db.query(Loan).options(joinedload(Loan.payments)).filter(Loan.owner_id == user.get("id")).all()
 
+@router.get("/next-payments", status_code=status.HTTP_200_OK)
+async def get_next_payments(
+    user: user_dependency,
+    db: db_dependency
+):
+    loans = db.query(Loan).options(
+        joinedload(Loan.payments)
+    ).filter(
+        Loan.owner_id == user.get("id")
+    ).all()
+
+    result = []
+
+    for loan in loans:
+
+        next_payment = (
+            sorted(
+                loan.payments,
+                key=lambda p: p.payment_number
+            )
+        )
+
+        pending_payment = next(
+            (payment for payment in next_payment if not payment.paid),
+            None
+        )
+
+        if pending_payment:
+            result.append({
+                "loan_id": loan.id,
+                "loan_name": loan.name,
+                "payment_id": pending_payment.payment_id,
+                "payment_number": pending_payment.payment_number,
+                "payment_date": pending_payment.payment_date,
+                "paid": pending_payment.paid
+            })
+
+    return result
+
 @router.get("/{loan_id}", status_code=status.HTTP_200_OK)
 async def get_loan_by_id(
         user: user_dependency,
