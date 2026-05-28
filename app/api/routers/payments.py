@@ -1,6 +1,10 @@
+# 📦 Standard library
+from datetime import date, timedelta
+
 # 🌐 Third-party
 from fastapi import APIRouter, HTTPException, Path
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from starlette import status
 
 # 📁 Local imports
@@ -54,3 +58,53 @@ async def pay_payment(
             status_code=500,
             detail="Error updating payment"
         )
+
+@router.get("/week", status_code=status.HTTP_200_OK)
+async def get_payments_by_week(
+    user: user_dependency,
+    db: db_dependency,
+    offset: int = 0
+):
+
+    # Current date
+    today = date.today()
+
+    # Get monday of current week
+    start_of_week = today - timedelta(days=today.weekday())
+
+    # Move week depending on offset
+    start_of_week = start_of_week + timedelta(weeks=offset)
+
+    # Get sunday
+    end_of_week = start_of_week + timedelta(days=6)
+
+    payments = db.query(Payment).options(
+        joinedload(Payment.loan)
+    ).join(Loan).filter(
+        Loan.owner_id == user.get("id"),
+        Payment.payment_date >= start_of_week,
+        Payment.payment_date <= end_of_week,
+        Payment.paid == False
+    ).order_by(
+        Payment.payment_date
+    ).all()
+
+    result = []
+
+    for payment in payments:
+
+        result.append({
+            "loan_id": payment.loan.id,
+            "loan_name": payment.loan.name,
+            "payment_id": payment.payment_id,
+            "payment_number": payment.payment_number,
+            "payment_date": payment.payment_date,
+            "payment_amount": payment.loan.amount / 10,
+            "paid": payment.paid
+        })
+
+    return {
+        "week_start": start_of_week,
+        "week_end": end_of_week,
+        "payments": result
+    }
