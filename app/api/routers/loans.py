@@ -50,6 +50,7 @@ async def get_next_payments(
             result.append({
                 "loan_id": loan.id,
                 "loan_name": loan.name,
+                "payment_amount": loan.amount / 10,
                 "payment_id": pending_payment.payment_id,
                 "payment_number": pending_payment.payment_number,
                 "payment_date": pending_payment.payment_date,
