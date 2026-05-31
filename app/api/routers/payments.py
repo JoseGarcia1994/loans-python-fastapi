@@ -84,7 +84,6 @@ async def get_payments_by_week(
         Loan.owner_id == user.get("id"),
         Payment.payment_date >= start_of_week,
         Payment.payment_date <= end_of_week,
-        Payment.paid == False
     ).order_by(
         Payment.payment_date
     ).all()
