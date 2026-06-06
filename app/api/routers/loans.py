@@ -72,9 +72,14 @@ async def create_loan(user: user_dependency,
         # Find next monday
         payment_dates = generate_payment_schedule(loan_request.date)
 
+        payment_amount = int(
+            loan_request.amount * 0.10
+        )
+
         for i, payment_date in enumerate(payment_dates):
             payment = Payment(
                 payment_number=i + 1,
+                payment_amount=payment_amount,
                 payment_date=payment_date,
                 paid=False,
                 loan_id=new_loan.id
