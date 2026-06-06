@@ -19,6 +19,52 @@ router = APIRouter(tags=["loan"])
 async def get_loans(user: user_dependency, db: db_dependency):
     return db.query(Loan).options(joinedload(Loan.payments)).filter(Loan.owner_id == user.get("id")).all()
 
+@router.get("/stats", status_code=status.HTTP_200_OK)
+async def get_dashboard_stats(user: user_dependency, db: db_dependency):
+
+    loans = (
+        db.query(Loan)
+        .options(joinedload(Loan.payments))
+        .filter(Loan.owner_id == user.get("id"))
+        .all()
+    )
+
+    total_loans = len(loans)
+    total_lent = sum(loan.amount for loan in loans)
+
+    active_loans = 0
+    pending_payments_count = 0
+    paid_payments_count = 0
+    pending_amount = 0
+
+    for loan in loans:
+
+        total_payments = len(loan.payments)
+        if total_payments == 0:
+            continue
+
+        payment_value = loan.amount / total_payments
+
+        pending_payments = [p for p in loan.payments if not p.paid]
+        paid_payments = [p for p in loan.payments if p.paid]
+
+        if pending_payments:
+            active_loans += 1
+
+        pending_payments_count += len(pending_payments)
+        paid_payments_count += len(paid_payments)
+
+        pending_amount += len(pending_payments) * payment_value
+
+    return {
+        "total_loans": total_loans,
+        "active_loans": active_loans,
+        "total_lent": total_lent,
+        "pending_payments": pending_payments_count,
+        "paid_payments": paid_payments_count,
+        "pending_amount": round(pending_amount, 2),
+    }
+
 @router.get("/{loan_id}", status_code=status.HTTP_200_OK)
 async def get_loan_by_id(
         user: user_dependency,
