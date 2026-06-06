@@ -123,8 +123,13 @@ async def update_loan(
 
     payments = db.query(Payment).filter(Payment.loan_id == loan_model.id).all()
 
+    payment_amount = int(
+        loan.amount * 0.10
+    )
+
     for i, payment in enumerate(payments):
         payment.payment_date = payment_dates[i]
+        payment.payment_amount = payment_amount
 
     db.commit()
 
