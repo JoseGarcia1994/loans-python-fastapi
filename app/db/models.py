@@ -1,4 +1,6 @@
 # 📦 Standard library
+from sqlalchemy import DateTime
+from datetime import datetime
 
 # 🌐 Third-party
 from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey
@@ -18,6 +20,12 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     role =Column(String)
 
+    created_at = Column(
+        DateTime,
+        default=datetime.now,
+        nullable=False
+    )
+
     loans = relationship("Loan", back_populates="owner")
 
 class Loan(Base):
@@ -27,6 +35,7 @@ class Loan(Base):
     name = Column(String)
     amount = Column(Integer)
     date = Column(Date)
+    created_at = Column(DateTime, default=datetime.now)
     owner_id = Column(Integer, ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="loans")
@@ -37,6 +46,7 @@ class Payment(Base):
 
     payment_id = Column(Integer, primary_key=True, index=True)
     payment_number = Column(Integer)
+    payment_amount = Column(Integer)
     payment_date = Column(Date)
     paid = Column(Boolean, default=False)
 
