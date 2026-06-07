@@ -10,6 +10,7 @@ class CreateUserRequest(BaseModel):
     first_name: str = Field(min_length=3, max_length=24, pattern="^[a-zA-Z ]+$")
     last_name: str = Field(min_length=3, max_length=24, pattern="^[a-zA-Z ]+$")
     password: str = Field(max_length=60)
+    terms_accepted: bool
 
     @field_validator("password")
     @classmethod
@@ -23,13 +24,23 @@ class CreateUserRequest(BaseModel):
 
         return value
 
+    @field_validator("terms_accepted")
+    @classmethod
+    def validate_terms(cls, value):
+
+        if value is not True:
+            raise ValueError("You must accept terms and conditions")
+
+        return value
+
     model_config = {
         "json_schema": {
             "example": {
                 "email": "email@email.com",
-                "first_name": "Jose",
-                "last_name": "Garcia",
-                "password": "Password@123"
+                "first_name": "Luis",
+                "last_name": "Villa",
+                "password": "Password@123",
+                "terms_accepted": True
             }
         }
     }
