@@ -1,4 +1,5 @@
 # 📦 Standard library
+from datetime import datetime
 
 # 🌐 Third-party
 from fastapi import APIRouter, HTTPException
@@ -28,7 +29,11 @@ async def create_user(db: db_dependency, user_request: CreateUserRequest):
         last_name=user_request.last_name,
         hashed_password=hash_password(user_request.password),
         is_active=True,
-        role="user"
+        role="user",
+
+        terms_accepted = user_request.terms_accepted,
+        terms_accepted_at = datetime.now() if user_request.terms_accepted else None,
+        terms_version = "v1"
     )
 
     db.add(create_user_model)
