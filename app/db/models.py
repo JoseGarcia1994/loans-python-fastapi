@@ -20,6 +20,10 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     role =Column(String)
 
+    terms_accepted = Column(Boolean, default=False)
+    terms_accepted_at = Column(DateTime, nullable=True)
+    terms_version = Column(String, nullable=True)
+
     created_at = Column(
         DateTime,
         default=datetime.now,
