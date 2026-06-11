@@ -39,12 +39,6 @@ async def get_dashboard_stats(user: user_dependency, db: db_dependency):
 
     for loan in loans:
 
-        total_payments = len(loan.payments)
-        if total_payments == 0:
-            continue
-
-        payment_value = loan.amount / total_payments
-
         pending_payments = [p for p in loan.payments if not p.paid]
         paid_payments = [p for p in loan.payments if p.paid]
 
@@ -54,7 +48,10 @@ async def get_dashboard_stats(user: user_dependency, db: db_dependency):
         pending_payments_count += len(pending_payments)
         paid_payments_count += len(paid_payments)
 
-        pending_amount += len(pending_payments) * payment_value
+        pending_amount += sum(
+            payment.payment_amount
+            for payment in pending_payments
+        )
 
     return {
         "total_loans": total_loans,
