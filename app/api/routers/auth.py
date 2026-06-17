@@ -29,7 +29,14 @@ async def login_for_access_token(
             detail="Invalid credentials"
         )
 
-    token = create_access_token(user.email, user.id, user.role, timedelta(minutes=20))
+    token = create_access_token(
+        user.email,
+        user.id,
+        user.role,
+        user.first_name,
+        user.last_name,
+        timedelta(minutes=20),
+    )
 
     return {
         "access_token": token,
