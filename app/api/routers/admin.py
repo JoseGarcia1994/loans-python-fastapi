@@ -11,36 +11,39 @@ from ..deps import db_dependency, user_dependency
 from ...db.models import Loan, User
 from ...schemas.user import UserResponse
 
+def require_admin(user):
+    if user.get("role") != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Not Authorized"
+        )
+
 router = APIRouter(
     tags=["admin"],
 )
 
 @router.get("/loans", status_code=status.HTTP_200_OK)
 async def get_loans(user: user_dependency, db: db_dependency):
-    if user.get("user_role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not Authorized"
-        )
 
-    return db.query(Loan).options(joinedload(Loan.payments)).all()
+    require_admin(user)
+
+    return (
+        db.query(Loan)
+        .options(joinedload(Loan.client))
+        .all()
+    )
 
 @router.get("/users",  response_model=list[UserResponse], status_code=status.HTTP_200_OK)
 async def get_users(user: user_dependency, db: db_dependency):
-    if user.get("user_role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not Authorized"
-        )
+    require_admin(user)
+
     return db.query(User).all()
 
 @router.delete("/loans/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):
-    if user.get("user_role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not Authorized"
-        )
+
+    require_admin(user)
+    
     loan = db.query(Loan).filter(Loan.id == loan_id).first()
 
     if loan is None:
