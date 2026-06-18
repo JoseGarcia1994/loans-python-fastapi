@@ -9,7 +9,7 @@ from starlette import status
 
 # 📁 Local imports
 from ..deps import db_dependency, user_dependency
-from ...db.models import Payment, Loan
+from ...db.models import Payment, Loan, Client
 
 router = APIRouter(
     tags=["payments"],
@@ -21,9 +21,17 @@ async def pay_payment(
     db: db_dependency,
     payment_id: int = Path(gt=0)
 ):
-    payment = db.query(Payment).filter(
-        Payment.payment_id == payment_id
-    ).first()
+    payment = (
+        db.query(Payment)
+        .options(
+            joinedload(Payment.loan)
+            .joinedload(Loan.client)
+        )
+        .filter(
+            Payment.payment_id == payment_id
+        )
+        .first()
+    )
 
     if payment is None:
         raise HTTPException(
@@ -31,12 +39,7 @@ async def pay_payment(
             detail="Payment not found"
         )
 
-    loan = db.query(Loan).filter(
-        Loan.id == payment.loan_id,
-        Loan.owner_id == user.get("id")
-    ).first()
-
-    if loan is None:
+    if payment.loan.client.owner_id != user.get("id"):
         raise HTTPException(
             status_code=403,
             detail="Not authorized"
@@ -44,7 +47,6 @@ async def pay_payment(
 
     try:
         payment.paid = True
-
         db.commit()
 
         return {
@@ -78,28 +80,38 @@ async def get_payments_by_week(
     # Get sunday
     end_of_week = start_of_week + timedelta(days=6)
 
-    payments = db.query(Payment).options(
-        joinedload(Payment.loan)
-    ).join(Loan).filter(
-        Loan.owner_id == user.get("id"),
-        Payment.payment_date >= start_of_week,
-        Payment.payment_date <= end_of_week,
-    ).order_by(
-        Payment.payment_date
-    ).all()
+    payments = (
+        db.query(Payment)
+        .options(
+            joinedload(Payment.loan)
+            .joinedload(Loan.client)
+        )
+        .join(Loan)
+        .join(Client)
+        .filter(
+            Client.owner_id == user.get("id"),
+            Payment.payment_date >= start_of_week,
+            Payment.payment_date <= end_of_week,
+        )
+        .order_by(
+            Payment.payment_date
+        )
+        .all()
+    )
 
     result = []
 
     for payment in payments:
-
         result.append({
             "loan_id": payment.loan.id,
-            "loan_name": payment.loan.name,
+            "client_name":
+                f"{payment.loan.client.first_name} "
+                f"{payment.loan.client.last_name}",
             "payment_id": payment.payment_id,
             "payment_number": payment.payment_number,
             "payment_date": payment.payment_date,
-            "payment_amount": payment.loan.amount / 10,
-            "paid": payment.paid
+            "payment_amount": payment.payment_amount,
+            "paid": payment.paid,
         })
 
     return {
