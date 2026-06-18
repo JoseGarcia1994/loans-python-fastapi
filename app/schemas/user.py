@@ -2,8 +2,26 @@
 import re
 
 # 🌐 Third-party
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 
+def validate_password_rules(value: str):
+
+    if not re.search(r"\d", value):
+        raise ValueError(
+            "Password must contain at least one number"
+        )
+
+    if not re.search(r"[A-Z]", value):
+        raise ValueError(
+            "Password must contain at least one uppercase letter"
+        )
+
+    if not re.search(r"[^\w\s]", value):
+        raise ValueError(
+            "Password must contain at least one special character"
+        )
+
+    return value
 
 class CreateUserRequest(BaseModel):
     email: EmailStr
@@ -15,14 +33,7 @@ class CreateUserRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value):
-
-        if not re.search(r"\d", value):
-            raise ValueError("Password must contain at least one number")
-
-        if not re.search(r"[^\w\s]", value):
-            raise ValueError("Password must contain at least one special character")
-
-        return value
+        return validate_password_rules(value)
 
     @field_validator("terms_accepted")
     @classmethod
@@ -53,6 +64,10 @@ class UserResponse(BaseModel):
     is_active: bool
     role: str
 
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
 class UserProfileResponse(BaseModel):
     id: int
     email: EmailStr
@@ -60,9 +75,19 @@ class UserProfileResponse(BaseModel):
     last_name: str
     role: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 class ChangePasswordRequest(BaseModel):
     password: str
-    new_password: str = Field(min_length=6,)
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=60,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, value):
+        return validate_password_rules(value)
