@@ -2,31 +2,22 @@
 from datetime import date
 
 # 🌐 Third-party
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
-# 📁 Local imports
-
-# This validates automatically the model
-class PaymentRequest(BaseModel):
-    payment: int = Field(gt=0)
-    payment_date: date
-    paid: bool
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "payment": 1,
-                "payment_date": "2026-04-25",
-                "paid": False
-            }
-        }
-    }
-
-# Only transfers object to JSON
 class PaymentResponse(BaseModel):
+
+    payment_id: int
+
     payment_number: int
+
+    payment_amount: int
+
     payment_date: date
+
     paid: bool
 
-    class Config:
-        from_attributes = True
+    loan_id: int
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
