@@ -4,6 +4,7 @@ from datetime import datetime
 # 🌐 Third-party
 from fastapi import APIRouter, HTTPException
 from starlette import status
+from sqlalchemy.orm import joinedload
 
 # 📁 Local imports
 from ...db.models import User
@@ -42,9 +43,26 @@ async def create_user(db: db_dependency, user_request: CreateUserRequest):
 
     return create_user_model
 
-@router.get("/", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
-async def get_current_user_profile(user: user_dependency, db: db_dependency):
-    return db.query(User).filter(User.id == user.get("id")).first()
+@router.get(
+    "/",
+    response_model=UserProfileResponse,
+    status_code=status.HTTP_200_OK
+)
+async def get_current_user_profile(
+    user: user_dependency,
+    db: db_dependency
+):
+
+    return (
+        db.query(User)
+        .options(
+            joinedload(User.clients)
+        )
+        .filter(
+            User.id == user.get("id")
+        )
+        .first()
+    )
 
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(user: user_dependency, db: db_dependency, password_request: ChangePasswordRequest):
