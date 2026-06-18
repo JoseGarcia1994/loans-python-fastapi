@@ -2,39 +2,36 @@
 from datetime import date
 
 # 🌐 Third-party
-from typing import Optional
 from pydantic import BaseModel, Field
 
-# 📁 Local imports
+class LoanBase(BaseModel):
 
-# This validates automatically the model
-class LoanRequest(BaseModel):
-    name: str = Field(min_length=3, max_length=24)
-    amount: int = Field(ge=1000, description="Loan amount must be at least 1000")
+    client_id: int = Field(
+        gt=0,
+        description="Client id"
+    )
+
+    amount: int = Field(
+        ge=1000,
+        description="Loan amount must be at least 1000"
+    )
+
     date: date
 
     model_config = {
-        "json_schema": {
+        "json_schema_extra": {
             "example": {
-                "name": "name of loan",
+                "client_id": 1,
                 "amount": 1000,
-                "date": "2021-01-10"
+                "date": "2026-06-17"
             }
         }
     }
 
 
-class UpdateLoanRequest(BaseModel):
-    name: str = Field(min_length=3, max_length=24)
-    amount: int = Field(ge=1000, description="Loan amount must be at least 1000")
-    date: date
+class LoanRequest(LoanBase):
+    pass
 
-    model_config = {
-        "json_schema": {
-            "example": {
-                "name": "name of loan",
-                "amount": 1000,
-                "date": "2021-01-10"
-            }
-        }
-    }
+
+class UpdateLoanRequest(LoanBase):
+    pass
