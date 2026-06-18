@@ -9,23 +9,44 @@ from starlette import status
 
 # 📁 Local imports
 from ..deps import db_dependency, user_dependency
-from ...db.models import Loan, Payment
+from ...db.models import Loan, Payment, Client
 from ...schemas.loan import LoanRequest, UpdateLoanRequest
 from ...services.loan_service import generate_payment_schedule
 
 router = APIRouter(tags=["loan"])
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_loans(user: user_dependency, db: db_dependency):
-    return db.query(Loan).options(joinedload(Loan.payments)).filter(Loan.owner_id == user.get("id")).all()
+async def get_loans(
+    user: user_dependency,
+    db: db_dependency,
+):
+
+    return (
+        db.query(Loan)
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Client.owner_id == user.get("id")
+        )
+        .all()
+    )
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
 async def get_dashboard_stats(user: user_dependency, db: db_dependency):
 
     loans = (
         db.query(Loan)
-        .options(joinedload(Loan.payments))
-        .filter(Loan.owner_id == user.get("id"))
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Client.owner_id == user.get("id")
+        )
         .all()
     )
 
@@ -68,12 +89,19 @@ async def get_loan_by_id(
         db: db_dependency,
         loan_id: int = Path(gt=0),
 ):
-    loan = db.query(Loan).options(
-        joinedload(Loan.payments)
-    ).filter(
-        Loan.id == loan_id,
-        Loan.owner_id == user.get("id")
-    ).first()
+    loan = (
+        db.query(Loan)
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Loan.id == loan_id,
+            Client.owner_id == user.get("id"),
+        )
+        .first()
+    )
 
     if not loan:
         raise HTTPException(
@@ -89,12 +117,19 @@ async def get_loan_by_date(
         db: db_dependency,
         date: date = Query(..., description="Date in format YYYY-MM-DD"),
 ):
-    loans = db.query(Loan).options(
-        joinedload(Loan.payments)
-    ).filter(
-        Loan.date == date,
-        Loan.owner_id == user.get("id")
-    ).all()
+    loans = (
+        db.query(Loan)
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Loan.date == date,
+            Client.owner_id == user.get("id"),
+        )
+        .all()
+    )
 
     if not loans:
         raise HTTPException(status_code=404, detail="No loans found for this date")
@@ -106,7 +141,24 @@ async def create_loan(user: user_dependency,
                       loan_request: LoanRequest
                       ):
     try:
-        new_loan = Loan(**loan_request.model_dump(), owner_id=user.get("id"))
+        client = (
+            db.query(Client)
+            .filter(
+                Client.id == loan_request.client_id,
+                Client.owner_id == user.get("id"),
+            )
+            .first()
+        )
+
+        if not client:
+            raise HTTPException(
+                status_code=404,
+                detail="Client not found",
+            )
+
+        new_loan = Loan(
+            **loan_request.model_dump()
+        )
 
         db.add(new_loan)
         db.commit()
@@ -148,7 +200,15 @@ async def update_loan(
         loan: UpdateLoanRequest,
         loan_id: int = Path(gt=0)
 ):
-    loan_model = db.query(Loan).filter(Loan.id == loan_id, Loan.owner_id == user.get("id")).first()
+    loan_model = (
+        db.query(Loan)
+        .join(Client)
+        .filter(
+            Loan.id == loan_id,
+            Client.owner_id == user.get("id"),
+        )
+        .first()
+    )
 
     if loan_model is None:
         raise HTTPException(status_code=404, detail="Loan not found")
@@ -181,8 +241,15 @@ async def update_loan(
 
 @router.delete("/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):
-
-    loan = db.query(Loan).filter(Loan.id == loan_id, Loan.owner_id == user.get("id")).first()
+    loan = (
+        db.query(Loan)
+        .join(Client)
+        .filter(
+            Loan.id == loan_id,
+            Client.owner_id == user.get("id"),
+        )
+        .first()
+    )
 
     if loan is None:
         raise HTTPException(status_code=404, detail="Loan not found")
