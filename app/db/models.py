@@ -42,7 +42,7 @@ class Client(Base):
 
     last_name = Column(String,nullable=False,)
 
-    phone = Column(String, unique=True, index=True, nullable=False)
+    phone = Column(String, index=True, nullable=False)
 
     address = Column(String,nullable=True,)
 
