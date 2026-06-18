@@ -19,16 +19,12 @@ def create_access_token(
     email: str,
     user_id: int,
     role: str,
-    first_name: str,
-    last_name: str,
     expires_delta: timedelta,
 ):
     encode = {
         "sub": email,
         "id": user_id,
         "role": role,
-        "first_name": first_name,
-        "last_name": last_name,
     }
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({"exp": expires})

@@ -33,8 +33,6 @@ async def login_for_access_token(
         user.email,
         user.id,
         user.role,
-        user.first_name,
-        user.last_name,
         timedelta(minutes=20),
     )
 
