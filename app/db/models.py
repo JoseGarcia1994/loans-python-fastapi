@@ -54,6 +54,8 @@ class Client(Base):
 
     reward_level = Column(String,default="Bronze",)
 
+    consecutive_late_payments = Column(Integer,default=0,)
+
     created_at = Column(DateTime,default=datetime.now,nullable=False,)
 
     owner_id = Column(Integer,ForeignKey("users.id"),nullable=False,
