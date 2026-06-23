@@ -16,14 +16,16 @@ class LoanBase(BaseModel):
         description="Loan amount must be at least 1000"
     )
 
-    date: date
+    start_date: date = Field(
+        description="Any date selected by user (will be normalized to Monday)"
+    )
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "client_id": 1,
                 "amount": 1000,
-                "date": "2026-06-17"
+                "start_date": "2026-06-17"
             }
         }
     }

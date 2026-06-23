@@ -1,5 +1,5 @@
 # 📦 Standard library
-from datetime import date
+from datetime import date, timedelta
 
 # 🌐 Third-party
 from fastapi import Path, HTTPException, Query, APIRouter
@@ -11,7 +11,7 @@ from starlette import status
 from ..deps import db_dependency, user_dependency
 from ...db.models import Loan, Payment, Client
 from ...schemas.loan import LoanRequest, UpdateLoanRequest
-from ...services.loan_service import generate_payment_schedule
+from ...services.loan_service import generate_payment_schedule, get_monday
 
 router = APIRouter(tags=["loan"])
 
@@ -135,11 +135,12 @@ async def get_loan_by_id(
 
     return loan
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_loan(user: user_dependency,
-                      db: db_dependency,
-                      loan_request: LoanRequest
-                      ):
+@router.post("/", status_code=201)
+async def create_loan(
+    user: user_dependency,
+    db: db_dependency,
+    loan_request: LoanRequest
+):
     try:
         client = (
             db.query(Client)
@@ -151,25 +152,29 @@ async def create_loan(user: user_dependency,
         )
 
         if not client:
-            raise HTTPException(
-                status_code=404,
-                detail="Client not found",
-            )
+            raise HTTPException(status_code=404, detail="Client not found")
 
+        # 📌 Change to Monday
+        start_date = get_monday(loan_request.start_date)
+
+        # 📌 Create Loan
         new_loan = Loan(
-            **loan_request.model_dump()
+            client_id=loan_request.client_id,
+            amount=loan_request.amount,
+            start_date=start_date,
+            end_date=start_date + timedelta(weeks=14),
+            total_weeks=14,
+            status="active",
         )
 
         db.add(new_loan)
         db.commit()
         db.refresh(new_loan)
 
-        # Find next monday
-        payment_dates = generate_payment_schedule(loan_request.date)
+        # 📌 Generate weekly payments
+        payment_dates = generate_payment_schedule(start_date)
 
-        payment_amount = int(
-            loan_request.amount * 0.10
-        )
+        payment_amount = int(loan_request.amount * 0.10)
 
         for i, payment_date in enumerate(payment_dates):
             payment = Payment(
@@ -177,9 +182,8 @@ async def create_loan(user: user_dependency,
                 payment_amount=payment_amount,
                 payment_date=payment_date,
                 paid=False,
-                loan_id=new_loan.id
+                loan_id=new_loan.id,
             )
-
             db.add(payment)
 
         db.commit()
@@ -188,10 +192,7 @@ async def create_loan(user: user_dependency,
 
     except SQLAlchemyError:
         db.rollback()
-        raise HTTPException(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error creating loan"
-        )
+        raise HTTPException(status_code=500, detail="Error creating loan")
 
 @router.put("/{loan_id}", response_model=LoanRequest | None, status_code=status.HTTP_200_OK)
 async def update_loan(

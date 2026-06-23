@@ -78,7 +78,10 @@ class Loan(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
     amount = Column(Integer, nullable=False,)
-    date = Column(Date, nullable=False,)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    total_weeks = Column(Integer, default=14)
+    status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.now, nullable=False,)
 
     payments = relationship("Payment", back_populates="loan", cascade="all, delete-orphan")
