@@ -82,6 +82,8 @@ class Loan(Base):
     end_date = Column(Date, nullable=False)
     total_weeks = Column(Integer, default=14)
     status = Column(String, default="active")
+    is_completed = Column(Boolean, default=False)
+    completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False,)
 
     payments = relationship("Payment", back_populates="loan", cascade="all, delete-orphan")
@@ -95,6 +97,7 @@ class Payment(Base):
     payment_amount = Column(Integer, nullable=False)
     payment_date = Column(Date, nullable=False)
     paid = Column(Boolean, default=False, nullable=False)
+    paid_at = Column(DateTime, nullable=True)
 
     loan_id = Column(Integer, ForeignKey("loans.id"), nullable=False)
     loan = relationship("Loan", back_populates="payments")

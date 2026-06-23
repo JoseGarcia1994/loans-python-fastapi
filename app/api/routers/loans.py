@@ -241,6 +241,91 @@ async def update_loan(
 
     return loan_model
 
+@router.patch(
+    "/{loan_id}/complete",
+    status_code=status.HTTP_200_OK,
+)
+async def complete_loan(
+    user: user_dependency,
+    db: db_dependency,
+    loan_id: int = Path(gt=0),
+):
+
+    loan = (
+        db.query(Loan)
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Loan.id == loan_id,
+            Client.owner_id == user.get("id"),
+        )
+        .first()
+    )
+
+    if not loan:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan not found",
+        )
+
+    if loan.is_completed:
+        raise HTTPException(
+            status_code=400,
+            detail="Loan already completed",
+        )
+
+    try:
+
+        pending_payments = [
+            payment
+            for payment in loan.payments
+            if not payment.paid
+        ]
+
+        for payment in pending_payments:
+            payment.paid = True
+            payment.paid_at = datetime.now()
+
+        loan.is_completed = True
+        loan.completed_at = datetime.now()
+        loan.status = "completed"
+
+        weeks_used = (
+            (loan.completed_at.date() - loan.start_date).days // 7
+        ) + 1
+
+        bonus_points = 0
+
+        if weeks_used <= 10:
+            bonus_points = 50
+
+        elif weeks_used <= 13:
+            bonus_points = 20
+
+        loan.client.loyalty_points += bonus_points
+
+        db.commit()
+
+        return {
+            "message": "Loan completed successfully",
+            "bonus_points": bonus_points,
+            "weeks_used": weeks_used,
+            "remaining_payments_paid": len(pending_payments),
+            "total_points": loan.client.loyalty_points,
+        }
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Error completing loan",
+        )
+
 
 @router.delete("/{loan_id}",  status_code=status.HTTP_204_NO_CONTENT)
 async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):

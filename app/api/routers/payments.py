@@ -1,5 +1,5 @@
 # 📦 Standard library
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 # 🌐 Third-party
 from fastapi import APIRouter, HTTPException, Path
@@ -15,6 +15,7 @@ from ...services.loyalty_service import (
     apply_points,
     update_late_streak,
 )
+from ...services.loan_service import close_loan_if_completed
 
 router = APIRouter(
     tags=["payments"],
@@ -69,6 +70,7 @@ async def pay_payment(
         )
 
         payment.paid = True
+        payment.paid_at = datetime.now()
 
         apply_points(
             client,
@@ -81,6 +83,8 @@ async def pay_payment(
         )
 
         db.commit()
+
+        close_loan_if_completed(payment.loan, db)
 
         return {
             "message": "Payment marked as paid",
