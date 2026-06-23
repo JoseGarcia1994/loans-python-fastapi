@@ -236,6 +236,9 @@ async def update_loan(
     )
 
     for key, value in update_data.items():
+        if key == "start_date" and value:
+            value = get_monday(value)
+
         setattr(loan_model, key, value)
 
     db.commit()
