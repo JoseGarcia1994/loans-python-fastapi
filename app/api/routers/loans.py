@@ -142,6 +142,7 @@ async def create_loan(
     loan_request: LoanRequest
 ):
     try:
+        # 📌 Validate client
         client = (
             db.query(Client)
             .filter(
@@ -153,6 +154,22 @@ async def create_loan(
 
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
+
+        # 🚨 NEW RULE: only 1 active loan
+        active_loan = (
+            db.query(Loan)
+            .filter(
+                Loan.client_id == loan_request.client_id,
+                Loan.is_completed == False,
+            )
+            .first()
+        )
+
+        if active_loan:
+            raise HTTPException(
+                status_code=400,
+                detail="Client already has an active loan"
+            )
 
         # 📌 Change to Monday
         start_date = get_monday(loan_request.start_date)
