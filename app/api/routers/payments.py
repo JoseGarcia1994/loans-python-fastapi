@@ -10,17 +10,26 @@ from starlette import status
 # 📁 Local imports
 from ..deps import db_dependency, user_dependency
 from ...db.models import Payment, Loan, Client
+from ...services.loyalty_service import (
+    calculate_payment_points,
+    apply_points,
+    update_late_streak,
+)
 
 router = APIRouter(
     tags=["payments"],
 )
 
-@router.patch("/{payment_id}/pay", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/{payment_id}/pay",
+    status_code=status.HTTP_200_OK,
+)
 async def pay_payment(
     user: user_dependency,
     db: db_dependency,
-    payment_id: int = Path(gt=0)
+    payment_id: int = Path(gt=0),
 ):
+
     payment = (
         db.query(Payment)
         .options(
@@ -39,26 +48,53 @@ async def pay_payment(
             detail="Payment not found"
         )
 
-    if payment.loan.client.owner_id != user.get("id"):
+    client = payment.loan.client
+
+    if client.owner_id != user.get("id"):
         raise HTTPException(
             status_code=403,
             detail="Not authorized"
         )
 
+    if payment.paid:
+        raise HTTPException(
+            status_code=400,
+            detail="Payment already paid"
+        )
+
     try:
+
+        points = calculate_payment_points(
+            payment
+        )
+
         payment.paid = True
+
+        apply_points(
+            client,
+            points,
+        )
+
+        update_late_streak(
+            client,
+            points,
+        )
+
         db.commit()
 
         return {
-            "message": "Payment marked as paid"
+            "message": "Payment marked as paid",
+            "points": points,
+            "total_points": client.loyalty_points,
         }
 
     except SQLAlchemyError:
+
         db.rollback()
 
         raise HTTPException(
             status_code=500,
-            detail="Error updating payment"
+            detail="Error updating payment",
         )
 
 @router.get("/week", status_code=status.HTTP_200_OK)

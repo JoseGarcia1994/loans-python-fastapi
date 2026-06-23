@@ -83,6 +83,30 @@ async def get_dashboard_stats(user: user_dependency, db: db_dependency):
         "pending_amount": round(pending_amount, 2),
     }
 
+@router.get("/by-date", status_code=status.HTTP_200_OK)
+async def get_loan_by_date(
+        user: user_dependency,
+        db: db_dependency,
+        date: date = Query(..., description="Date in format YYYY-MM-DD"),
+):
+    loans = (
+        db.query(Loan)
+        .options(
+            joinedload(Loan.payments),
+            joinedload(Loan.client),
+        )
+        .join(Client)
+        .filter(
+            Loan.date == date,
+            Client.owner_id == user.get("id"),
+        )
+        .all()
+    )
+
+    if not loans:
+        raise HTTPException(status_code=404, detail="No loans found for this date")
+    return loans
+
 @router.get("/{loan_id}", status_code=status.HTTP_200_OK)
 async def get_loan_by_id(
         user: user_dependency,
@@ -110,30 +134,6 @@ async def get_loan_by_id(
         )
 
     return loan
-
-@router.get("/by-date", status_code=status.HTTP_200_OK)
-async def get_loan_by_date(
-        user: user_dependency,
-        db: db_dependency,
-        date: date = Query(..., description="Date in format YYYY-MM-DD"),
-):
-    loans = (
-        db.query(Loan)
-        .options(
-            joinedload(Loan.payments),
-            joinedload(Loan.client),
-        )
-        .join(Client)
-        .filter(
-            Loan.date == date,
-            Client.owner_id == user.get("id"),
-        )
-        .all()
-    )
-
-    if not loans:
-        raise HTTPException(status_code=404, detail="No loans found for this date")
-    return loans
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_loan(user: user_dependency,

@@ -43,7 +43,7 @@ async def get_users(user: user_dependency, db: db_dependency):
 async def delete_loan(user: user_dependency, db: db_dependency, loan_id: int = Path(gt=0)):
 
     require_admin(user)
-    
+
     loan = db.query(Loan).filter(Loan.id == loan_id).first()
 
     if loan is None:
