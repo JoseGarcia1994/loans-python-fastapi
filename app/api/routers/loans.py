@@ -1,5 +1,5 @@
 # 📦 Standard library
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 # 🌐 Third-party
 from fastapi import Path, HTTPException, Query, APIRouter
@@ -97,7 +97,7 @@ async def get_loan_by_date(
         )
         .join(Client)
         .filter(
-            Loan.date == date,
+            Loan.start_date == date,
             Client.owner_id == user.get("id"),
         )
         .all()
@@ -214,7 +214,9 @@ async def update_loan(
     if loan_model is None:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    update_data = loan.model_dump(exclude={"id"})
+    update_data = loan.model_dump(
+        exclude_unset=True
+    )
 
     for key, value in update_data.items():
         setattr(loan_model, key, value)
@@ -223,7 +225,7 @@ async def update_loan(
     db.refresh(loan_model)
 
     # Find next monday
-    payment_dates = generate_payment_schedule(loan.date)
+    payment_dates = generate_payment_schedule(loan.start_date)
 
     payments = db.query(Payment).filter(Payment.loan_id == loan_model.id).all()
 
