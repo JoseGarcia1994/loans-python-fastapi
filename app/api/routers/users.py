@@ -52,17 +52,21 @@ async def get_current_user_profile(
     user: user_dependency,
     db: db_dependency
 ):
-
-    return (
+    user_model = (
         db.query(User)
-        .options(
-            joinedload(User.clients)
-        )
         .filter(
             User.id == user.get("id")
         )
         .first()
     )
+
+    if user_model is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return user_model
 
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(user: user_dependency, db: db_dependency, password_request: ChangePasswordRequest):
