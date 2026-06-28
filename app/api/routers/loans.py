@@ -218,6 +218,7 @@ async def update_loan(
         loan: UpdateLoanRequest,
         loan_id: int = Path(gt=0)
 ):
+    # Fetch loan and verify ownership
     loan_model = (
         db.query(Loan)
         .join(Client)
@@ -231,27 +232,27 @@ async def update_loan(
     if loan_model is None:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    update_data = loan.model_dump(
-        exclude_unset=True
-    )
+    # Normalize start_date to Monday before applying any updates
+    start_date = get_monday(loan.start_date)
+
+    # Apply updated fields to the loan model
+    update_data = loan.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
-        if key == "start_date" and value:
-            value = get_monday(value)
-
+        if key == "start_date":
+            value = start_date
         setattr(loan_model, key, value)
 
     db.commit()
     db.refresh(loan_model)
 
-    # Find next monday
-    payment_dates = generate_payment_schedule(loan.start_date)
+    # Regenerate payment schedule based on the normalized Monday start date
+    payment_dates = generate_payment_schedule(start_date)
 
+    # Fetch existing payments and update their dates and amounts
     payments = db.query(Payment).filter(Payment.loan_id == loan_model.id).all()
 
-    payment_amount = int(
-        loan.amount * 0.10
-    )
+    payment_amount = int(loan.amount * 0.10)
 
     for i, payment in enumerate(payments):
         payment.payment_date = payment_dates[i]

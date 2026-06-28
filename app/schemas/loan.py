@@ -35,5 +35,11 @@ class LoanRequest(LoanBase):
     pass
 
 
-class UpdateLoanRequest(LoanBase):
-    pass
+class UpdateLoanRequest(BaseModel):
+    amount: int = Field(
+        ge=1000,
+        description="Loan amount must be at least 1000"
+    )
+    start_date: date = Field(
+        description="Any date selected by user (will be normalized to Monday)"
+    )
