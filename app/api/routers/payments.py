@@ -13,7 +13,7 @@ from ...db.models import Payment, Loan, Client
 from ...services.loyalty_service import (
     calculate_payment_points,
     apply_points,
-    update_late_streak,
+    update_late_streak, calculate_liquidation_points,
 )
 from ...services.loan_service import close_loan_if_completed
 
@@ -159,3 +159,58 @@ async def get_payments_by_week(
         "week_end": end_of_week,
         "payments": result
     }
+
+@router.patch("/{loan_id}/liquidate", status_code=status.HTTP_200_OK)
+async def liquidate_loan(
+    user: user_dependency,
+    db: db_dependency,
+    loan_id: int = Path(gt=0),
+):
+    loan = (
+        db.query(Loan)
+        .options(joinedload(Loan.payments), joinedload(Loan.client))
+        .join(Client)
+        .filter(
+            Loan.id == loan_id,
+            Client.owner_id == user.get("id"),
+        )
+        .first()
+    )
+
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    if loan.is_completed:
+        raise HTTPException(status_code=400, detail="Loan already completed")
+
+    try:
+        client = loan.client
+        pending_payments = [p for p in loan.payments if not p.paid]
+
+        if not pending_payments:
+            raise HTTPException(status_code=400, detail="No pending payments")
+
+        # Mark all pending as paid with today's date
+        now = datetime.now()
+        for payment in pending_payments:
+            payment.paid = True
+            payment.paid_at = now
+
+        # Calculate and apply liquidation bonus
+        bonus = calculate_liquidation_points(len(pending_payments, loan.amount))
+        apply_points(client, bonus)
+
+        db.commit()
+
+        close_loan_if_completed(loan, db)
+
+        return {
+            "message": "Loan liquidated successfully",
+            "payments_settled": len(pending_payments),
+            "bonus_points": bonus,
+            "total_points": client.loyalty_points,
+        }
+
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error liquidating loan")
