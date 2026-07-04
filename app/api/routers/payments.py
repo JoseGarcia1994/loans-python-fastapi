@@ -192,9 +192,12 @@ async def liquidate_loan(
 
         # Mark all pending as paid with today's date
         now = datetime.now()
+        today = now.date()
+
         for payment in pending_payments:
             payment.paid = True
             payment.paid_at = now
+            payment.payment_date = today
 
         # Calculate and apply liquidation bonus
         bonus = calculate_liquidation_points(len(pending_payments), loan.amount)
