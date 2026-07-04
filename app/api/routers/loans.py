@@ -19,20 +19,22 @@ router = APIRouter(tags=["loan"])
 async def get_loans(
     user: user_dependency,
     db: db_dependency,
+    show_completed: bool = False,
 ):
-
-    return (
+    query = (
         db.query(Loan)
         .options(
             joinedload(Loan.payments),
             joinedload(Loan.client),
         )
         .join(Client)
-        .filter(
-            Client.owner_id == user.get("id")
-        )
-        .all()
+        .filter(Client.owner_id == user.get("id"))
     )
+
+    if not show_completed:
+        query = query.filter(Loan.is_completed == False)
+
+    return query.all()
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
 async def get_dashboard_stats(user: user_dependency, db: db_dependency):
