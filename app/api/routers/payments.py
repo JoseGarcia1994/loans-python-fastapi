@@ -160,7 +160,7 @@ async def get_payments_by_week(
         "payments": result
     }
 
-@router.patch("/{loan_id}/liquidate", status_code=status.HTTP_200_OK)
+@router.patch("/loan/{loan_id}/liquidate", status_code=status.HTTP_200_OK)
 async def liquidate_loan(
     user: user_dependency,
     db: db_dependency,
@@ -197,7 +197,7 @@ async def liquidate_loan(
             payment.paid_at = now
 
         # Calculate and apply liquidation bonus
-        bonus = calculate_liquidation_points(len(pending_payments, loan.amount))
+        bonus = calculate_liquidation_points(len(pending_payments), loan.amount)
         apply_points(client, bonus)
 
         db.commit()
