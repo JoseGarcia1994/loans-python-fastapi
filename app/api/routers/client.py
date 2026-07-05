@@ -72,28 +72,26 @@ async def create_client(
     db: db_dependency,
     client_request: ClientCreate,
 ):
-    phone = "".join(
-        filter(str.isdigit, client_request.phone)
-    )
+    phone = None
+    if client_request.phone:
+        phone = "".join(filter(str.isdigit, client_request.phone))
 
-    existing_client = (
-        db.query(Client)
-        .filter(
-            Client.phone == client_request.phone,
-            Client.owner_id == user.get("id"),
+        existing_client = (
+            db.query(Client)
+            .filter(
+                Client.phone == phone,
+                Client.owner_id == user.get("id"),
+            )
+            .first()
         )
-        .first()
-    )
 
-    if existing_client:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Phone number already exists",
-        )
+        if existing_client:
+            raise HTTPException(
+                status_code=400,
+                detail="Phone number already exists",
+            )
 
     try:
-
         client = Client(
             **client_request.model_dump(exclude={"phone"}),
             phone=phone,
@@ -101,22 +99,17 @@ async def create_client(
         )
 
         db.add(client)
-
         db.commit()
-
         db.refresh(client)
 
         return client
 
     except SQLAlchemyError:
-
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail="Error creating client",
         )
-
 
 @router.put(
     "/{client_id}",
@@ -150,15 +143,52 @@ async def update_client(
         exclude_unset=True
     )
 
+    # Clean and validate phone if it was included in the request
+    if "phone" in update_data and update_data["phone"]:
+
+        cleaned_phone = "".join(
+            filter(str.isdigit, update_data["phone"])
+        )
+
+        existing_client = (
+            db.query(Client)
+            .filter(
+                Client.phone == cleaned_phone,
+                Client.owner_id == user.get("id"),
+                Client.id != client_id,
+            )
+            .first()
+        )
+
+        if existing_client:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Phone number already exists",
+            )
+
+        update_data["phone"] = cleaned_phone
+
     for key, value in update_data.items():
 
         setattr(client, key, value)
 
-    db.commit()
+    try:
 
-    db.refresh(client)
+        db.commit()
 
-    return client
+        db.refresh(client)
+
+        return client
+
+    except SQLAlchemyError:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Error updating client",
+        )
 
 
 @router.delete(
