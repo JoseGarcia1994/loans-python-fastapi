@@ -2,20 +2,21 @@
 from datetime import datetime
 
 # 🌐 Third-party
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from starlette import status
-from sqlalchemy.orm import joinedload
+
 
 # 📁 Local imports
 from ...db.models import User
 from ...schemas.user import CreateUserRequest, UserResponse, UserProfileResponse, ChangePasswordRequest
 from ...core.security import hash_password, bcrypt_context
+from ...services.email_service import send_welcome_email
 from ..deps import db_dependency, user_dependency
 
 router = APIRouter(tags=["user"])
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
-async def create_user(db: db_dependency, user_request: CreateUserRequest):
+async def create_user(db: db_dependency, user_request: CreateUserRequest, background_tasks: BackgroundTasks):
     existing_user = db.query(User).filter(User.email == user_request.email).first()
 
     if existing_user:
@@ -40,6 +41,13 @@ async def create_user(db: db_dependency, user_request: CreateUserRequest):
     db.add(create_user_model)
     db.commit()
     db.refresh(create_user_model)
+
+    # 📧 Sends the email in the background, without blocking the response
+    background_tasks.add_task(
+        send_welcome_email,
+        create_user_model.email,
+        create_user_model.first_name,
+    )
 
     return create_user_model
 
