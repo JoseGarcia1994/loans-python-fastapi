@@ -91,3 +91,20 @@ class ChangePasswordRequest(BaseModel):
     @classmethod
     def validate_password(cls, value):
         return validate_password_rules(value)
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+
+    new_password: str = Field(
+        min_length=8,
+        max_length=60,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, value):
+        return validate_password_rules(value)

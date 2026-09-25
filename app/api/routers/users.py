@@ -5,12 +5,26 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from starlette import status
 
-
 # 📁 Local imports
 from ...db.models import User
-from ...schemas.user import CreateUserRequest, UserResponse, UserProfileResponse, ChangePasswordRequest
-from ...core.security import hash_password, bcrypt_context
-from ...services.email_service import send_welcome_email
+from ...schemas.user import (
+    ChangePasswordRequest,
+    CreateUserRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    UserProfileResponse,
+    UserResponse,
+)
+from ...core.security import (
+    bcrypt_context,
+    create_password_reset_token,
+    hash_password,
+    verify_password_reset_token,
+)
+from ...services.email_service import (
+    send_password_reset_email,
+    send_welcome_email,
+)
 from ..deps import db_dependency, user_dependency
 
 router = APIRouter(tags=["user"])
@@ -94,6 +108,82 @@ async def change_password(user: user_dependency, db: db_dependency, password_req
 
     user_model.hashed_password = hash_password(
         password_request.new_password
+    )
+
+    db.commit()
+
+@router.post(
+    "/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: db_dependency,
+    background_tasks: BackgroundTasks,
+):
+    user_model = (
+        db.query(User)
+        .filter(User.email == request.email)
+        .first()
+    )
+
+    # No revelar si el correo está registrado.
+    if user_model:
+        reset_token = create_password_reset_token(
+            user_id=user_model.id
+        )
+
+        background_tasks.add_task(
+            send_password_reset_email,
+            user_model.email,
+            user_model.first_name,
+            reset_token,
+        )
+
+    return {
+        "message": "If the email exists, recovery instructions will be sent"
+    }
+
+
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: db_dependency,
+):
+    user_id = verify_password_reset_token(request.token)
+
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired recovery link",
+        )
+
+    user_model = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if user_model is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired recovery link",
+        )
+
+    if bcrypt_context.verify(
+        request.new_password,
+        user_model.hashed_password,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different",
+        )
+
+    user_model.hashed_password = hash_password(
+        request.new_password
     )
 
     db.commit()
