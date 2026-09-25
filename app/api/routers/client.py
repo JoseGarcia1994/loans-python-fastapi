@@ -5,7 +5,8 @@ from starlette import status
 
 # 📁 Local imports
 from ..deps import db_dependency, user_dependency
-from ...db.models import Client
+from sqlalchemy.orm import joinedload
+from ...db.models import Client, Loan, Payment
 from ...schemas.client_schema import (
     ClientCreate,
     ClientUpdate,
@@ -15,51 +16,29 @@ from ...schemas.client_schema import (
 router = APIRouter(tags=["client"])
 
 
-@router.get(
-    "/",
-    response_model=list[ClientResponse],
-    status_code=status.HTTP_200_OK,
-)
-async def get_clients(
-    user: user_dependency,
-    db: db_dependency,
-):
-
+@router.get("/", response_model=list[ClientResponse], status_code=status.HTTP_200_OK)
+async def get_clients(user: user_dependency, db: db_dependency):
     return (
         db.query(Client)
-        .filter(
-            Client.owner_id == user.get("id")
+        .options(
+            joinedload(Client.loans).joinedload(Loan.payments)  # ← eager load
         )
+        .filter(Client.owner_id == user.get("id"))
         .all()
     )
 
-
-@router.get(
-    "/{client_id}",
-    response_model=ClientResponse,
-    status_code=status.HTTP_200_OK,
-)
-async def get_client_by_id(
-    user: user_dependency,
-    db: db_dependency,
-    client_id: int = Path(gt=0),
-):
-
+@router.get("/{client_id}", response_model=ClientResponse, status_code=status.HTTP_200_OK)
+async def get_client_by_id(user: user_dependency, db: db_dependency, client_id: int = Path(gt=0)):
     client = (
         db.query(Client)
-        .filter(
-            Client.id == client_id,
-            Client.owner_id == user.get("id"),
+        .options(
+            joinedload(Client.loans).joinedload(Loan.payments)  # ← eager load
         )
+        .filter(Client.id == client_id, Client.owner_id == user.get("id"))
         .first()
     )
-
     if not client:
-        raise HTTPException(
-            status_code=404,
-            detail="Client not found",
-        )
-
+        raise HTTPException(status_code=404, detail="Client not found")
     return client
 
 @router.post(
