@@ -9,6 +9,7 @@ from starlette import status
 from ...db.models import User
 from ...schemas.user import (
     ChangePasswordRequest,
+    ChangeEmailRequest,
     CreateUserRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
@@ -111,6 +112,57 @@ async def change_password(user: user_dependency, db: db_dependency, password_req
     )
 
     db.commit()
+
+@router.put("/email", status_code=status.HTTP_200_OK)
+async def change_email(
+    user: user_dependency,
+    db: db_dependency,
+    email_request: ChangeEmailRequest,
+):
+    user_model = (
+        db.query(User)
+        .filter(User.id == user.get("id"))
+        .first()
+    )
+
+    if user_model is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if not bcrypt_context.verify(
+        email_request.password,
+        user_model.hashed_password
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect current password"
+        )
+
+    existing_user = (
+        db.query(User)
+        .filter(
+            User.email == email_request.new_email,
+            User.id != user_model.id
+        )
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    user_model.email = email_request.new_email
+    db.commit()
+    db.refresh(user_model)
+
+    return {
+        "message": "Email updated successfully",
+        "email": user_model.email,
+    }
 
 @router.post(
     "/forgot-password",

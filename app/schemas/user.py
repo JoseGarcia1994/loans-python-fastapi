@@ -92,6 +92,10 @@ class ChangePasswordRequest(BaseModel):
     def validate_password(cls, value):
         return validate_password_rules(value)
 
+class ChangeEmailRequest(BaseModel):
+    new_email: EmailStr
+    password: str
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
